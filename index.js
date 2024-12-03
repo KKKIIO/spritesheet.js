@@ -29,7 +29,7 @@ if (!module.parent) {
   program
     .name('spritesheet-js')
     .description('Spritesheet generator')
-    .argument('<files>', 'Image files pattern or paths')
+    .argument('<files...>', 'Image files pattern or paths')
     .option('-f, --format <type>', 'format of spritesheet (starling, sparrow, json, yaml, pixi.js, easel.js, egret, zebkit, cocos2d)', '')
     .option('-cf, --custom-format <path>', 'path to external format template', '')
     .option('-n, --name <name>', 'name of generated spritesheet', 'spritesheet')
