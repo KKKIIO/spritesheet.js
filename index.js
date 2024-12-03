@@ -4,131 +4,74 @@ var async = require('async');
 var fs = require('fs');
 var path = require('path');
 var glob = require('glob');
-var optimist = require('optimist');
+var { Command } = require('commander');
 
 module.exports = generate;
 
 var FORMATS = {
-  'json': {template: 'json.template', extension: 'json', trim: false},
-  'yaml': {template: 'yaml.template', extension: 'yaml', trim: false},
-  'jsonarray': {template: 'jsonarray.template', extension: 'json', trim: false},
-  'pixi.js': {template: 'json.template', extension: 'json', trim: true},
-  'starling': {template: 'starling.template', extension: 'xml', trim: true},
-  'sparrow': {template: 'starling.template', extension: 'xml', trim: true},
-  'easel.js': {template: 'easeljs.template', extension: 'json', trim: false},
-  'egret': {template: 'egret.template', extension: 'json', trim: false},
-  'zebkit': {template: 'zebkit.template', extension: 'js', trim: false},
-  'cocos2d': {template: 'cocos2d.template', extension: 'plist', trim: false},
-  'cocos2d-v3': {template: 'cocos2d-v3.template', extension: 'plist', trim: false},
-  'css': {template: 'css.template', extension: 'css', trim: false}
+  'json': { template: 'json.template', extension: 'json', trim: false },
+  'yaml': { template: 'yaml.template', extension: 'yaml', trim: false },
+  'jsonarray': { template: 'jsonarray.template', extension: 'json', trim: false },
+  'pixi.js': { template: 'json.template', extension: 'json', trim: true },
+  'starling': { template: 'starling.template', extension: 'xml', trim: true },
+  'sparrow': { template: 'starling.template', extension: 'xml', trim: true },
+  'easel.js': { template: 'easeljs.template', extension: 'json', trim: false },
+  'egret': { template: 'egret.template', extension: 'json', trim: false },
+  'zebkit': { template: 'zebkit.template', extension: 'js', trim: false },
+  'cocos2d': { template: 'cocos2d.template', extension: 'plist', trim: false },
+  'cocos2d-v3': { template: 'cocos2d-v3.template', extension: 'plist', trim: false },
+  'css': { template: 'css.template', extension: 'css', trim: false }
 };
 
 if (!module.parent) {
-  var argv = optimist.usage('Usage: $0 [options] <files>')
-    .options('f', {
-      alias: 'format',
-      describe: 'format of spritesheet (starling, sparrow, json, yaml, pixi.js, easel.js, egret, zebkit, cocos2d)',
-      default: ''
-    })
-    .options('cf', {
-      alias: 'customFormat',
-      describe: 'path to external format template',
-      default: ''
-    })
-    .options('n', {
-      alias: 'name',
-      describe: 'name of generated spritesheet',
-      default: 'spritesheet'
-    })
-    .options('p', {
-      alias: 'path',
-      describe: 'path to export directory',
-      default: '.'
-    })
-    .options('fullpath', {
-      describe: 'include path in file name',
-      default: false,
-      boolean: true
-    })
-    .options('prefix', {
-      describe: 'prefix for image paths',
-      default: ""
-    })
-    .options('trim', {
-      describe: 'removes transparent whitespaces around images',
-      default: false,
-      boolean: true
-    })
-    .options('square', {
-      describe: 'texture should be s square',
-      default: false,
-      boolean: true
-    })
-    .options('powerOfTwo', {
-      describe: 'texture width and height should be power of two',
-      default: false,
-      boolean: true
-    })
-    .options('validate', {
-      describe: 'check algorithm returned data',
-      default: false,
-      boolean: true
-    })
-    .options('scale', {
-      describe: 'percentage scale',
-      default: '100%'
-    })
-    .options('fuzz', {
-      describe: 'percentage fuzz factor (usually value of 1% is a good choice)',
-      default: ''
-    })
-    .options('algorithm', {
-      describe: 'packing algorithm: growing-binpacking (default), binpacking (requires passing --width and --height options), vertical or horizontal',
-      default: 'growing-binpacking'
-    })
-    .options('width', {
-      describe: 'width for binpacking',
-      default: undefined
-    })
-    .options('height', {
-      describe: 'height for binpacking',
-      default: undefined
-    })
-    .options('padding', {
-      describe: 'padding between images in spritesheet',
-      default: 0
-    })
-    .options('sort', {
-      describe: 'Sort method: maxside (default), area, width or height',
-      default: 'maxside'
-    })
-    .options('divisibleByTwo', {
-      describe: 'every generated frame coordinates should be divisible by two',
-      default: false,
-      boolean: true
-    })
-    .options('cssOrder', {
-      describe: 'specify the exact order of generated css class names',
-      default: ''
-    })
-    .check(function(argv){
-      if(argv.algorithm !== 'binpacking' || !isNaN(Number(argv.width)) && !isNaN(Number(argv.height))){
-        return true;
-      }
-      
-      throw new Error('Width and/or height are not defined for binpacking');
-    })
-    .demand(1)
-    .argv;
+  const program = new Command();
 
-  if (argv._.length == 0) {
-    optimist.showHelp();
-    return;
-  }
-  generate(argv._, argv, function (err) {
-    if (err) throw err;
-    console.log('Spritesheet successfully generated');
-  });
+  program
+    .name('spritesheet-js')
+    .description('Spritesheet generator')
+    .argument('<files>', 'Image files pattern or paths')
+    .option('-f, --format <type>', 'format of spritesheet (starling, sparrow, json, yaml, pixi.js, easel.js, egret, zebkit, cocos2d)', '')
+    .option('-cf, --custom-format <path>', 'path to external format template', '')
+    .option('-n, --name <name>', 'name of generated spritesheet', 'spritesheet')
+    .option('-p, --path <path>', 'path to export directory', '.')
+    .option('--fullpath', 'include path in file name', false)
+    .option('--prefix <prefix>', 'prefix for image paths', '')
+    .option('--trim', 'removes transparent whitespaces around images', false)
+    .option('--square', 'texture should be square', false)
+    .option('--power-of-two', 'texture width and height should be power of two', false)
+    .option('--validate', 'check algorithm returned data', false)
+    .option('--scale <scale>', 'percentage scale', '100%')
+    .option('--fuzz <fuzz>', 'percentage fuzz factor (usually value of 1% is a good choice)', '')
+    .option('--algorithm <algorithm>', 'packing algorithm: growing-binpacking (default), binpacking, vertical or horizontal', 'growing-binpacking')
+    .option('--width <width>', 'width for binpacking')
+    .option('--height <height>', 'height for binpacking')
+    .option('--padding <padding>', 'padding between images in spritesheet', '0')
+    .option('--sort <method>', 'Sort method: maxside (default), area, width or height', 'maxside')
+    .option('--divisible-by-two', 'every generated frame coordinates should be divisible by two', false)
+    .option('--css-order <order>', 'specify the exact order of generated css class names', '')
+    .action((files, options) => {
+      // Validate binpacking requirements
+      if (options.algorithm === 'binpacking' &&
+        (isNaN(Number(options.width)) || isNaN(Number(options.height)))) {
+        console.error('Error: Width and height are required for binpacking algorithm');
+        process.exit(1);
+      }
+
+      // Convert files argument to array if it's a glob pattern
+      const fileList = Array.isArray(files) ? files : glob.sync(files);
+
+      if (fileList.length === 0) {
+        console.error('Error: No files specified');
+        process.exit(1);
+      }
+
+      generate(fileList, options, function (err) {
+        if (err) throw err;
+        console.log('Spritesheet successfully generated');
+      });
+    });
+
+  program.parse();
 }
 
 /**
@@ -158,7 +101,7 @@ function generate(files, options, callback) {
 
   options = options || {};
   if (Array.isArray(options.format)) {
-    options.format = options.format.map(function(x){return FORMATS[x]});
+    options.format = options.format.map(function (x) { return FORMATS[x] });
   }
   else if (options.format || !options.customFormat) {
     options.format = [FORMATS[options.format] || FORMATS['json']];
